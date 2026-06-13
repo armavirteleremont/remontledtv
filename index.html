@@ -440,12 +440,10 @@
         loop: true, 
         autoplay: { delay: 4000, disableOnInteraction: false }, 
         effect: 'fade',
-        fadeEffect: {
-            crossFade: true 
-        }
+        fadeEffect: { crossFade: true }
     });
 
-    // Асинхронная отправка формы в Telegram и на Email
+    // Асинхронная отправка формы
     document.getElementById('repairForm').addEventListener('submit', async function(e) {
         e.preventDefault(); // Запрещаем перезагрузку страницы
         
@@ -456,58 +454,73 @@
         const successBlock = document.getElementById('successMessage');
         const submitBtn = form.querySelector('button[type="submit"]');
 
-        // Меняем текст кнопки и блокируем её от двойных кликов
+        // Блокируем кнопку на время отправки
         submitBtn.disabled = true;
         submitBtn.innerText = 'Отправка...';
 
-        // --- Настройки Telegram ---
         const botToken = '8723286181:AAH9V7MknpyutDAocpW0Hbnn99WvhMeHJP0';
         const chatId = '-1003937610148';
         const textMessage = `🔔 *Новая заявка с сайта!*\n\n👤 *Имя:* ${name}\n📞 *Телефон:* ${phone}\n📝 *Что сломалось:* ${message}`;
 
+        let tgSuccess = false;
+        let emailSuccess = false;
+
         try {
-            // 1. Формируем запрос в Telegram
-            const telegramRequest = fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    chat_id: chatId,
-                    text: textMessage,
-                    parse_mode: 'Markdown'
-                })
-            });
+            // 1. Отправка на Email через Formsubmit (привязываем успех к ней)
+            try {
+                const emailResponse = await fetch('https://formsubmit.co/ajax/pashor_@mail.ru', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        'Имя': name,
+                        'Телефон': phone,
+                        'Сообщение': message,
+                        '_subject': 'Новая заявка с сайта: Армавиртелеремонт',
+                        '_captcha': 'false' // Отключаем капчу для стабильности на Android
+                    })
+                });
+                emailSuccess = emailResponse.ok;
+                if (!emailSuccess) console.warn('Сервер почты отклонил запрос');
+            } catch (err) {
+                console.error('Ошибка соединения с почтой:', err);
+            }
 
-            // 2. Формируем запрос на Email через Formsubmit
-            const emailRequest = fetch('https://formsubmit.co/ajax/pashor_@mail.ru', {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify({
-                    'Имя': name,
-                    'Телефон': phone,
-                    'Сообщение': message,
-                    '_subject': 'Новая заявка с сайта: Армавиртелеремонт' // Тема письма
-                })
-            });
+            // 2. Отправка в Telegram (работает параллельно в фоновом режиме)
+            try {
+                const tgResponse = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ chat_id: chatId, text: textMessage, parse_mode: 'Markdown' })
+                });
+                tgSuccess = tgResponse.ok;
+                if (!tgSuccess) console.warn('Telegram отклонил запрос (блокировка, VPN или частые запросы)');
+            } catch (err) {
+                console.error('Ошибка соединения с Telegram:', err);
+            }
 
-            // Запускаем оба запроса параллельно и ждем их выполнения
-            const [telegramResponse, emailResponse] = await Promise.all([telegramRequest, emailRequest]);
-
-            // Если хотя бы один сервис ответил успешно (лучше ориентироваться на Telegram как основной)
-            if (telegramResponse.ok || emailResponse.ok) {
+            // 3. Проверка результата: ориентируемся главным образом на Email
+            if (emailSuccess) {
+                form.reset(); // Очищаем поля формы
                 form.style.display = 'none'; // Скрываем форму
-                successBlock.style.display = 'block'; // Показываем плашку успеха
+                successBlock.style.display = 'block'; // Показываем зелёное сообщение об успехе
+            } else if (tgSuccess) {
+                // Подстраховка: если на email вдруг не ушло, но ушло в Telegram — тоже считаем успехом
+                form.reset();
+                form.style.display = 'none';
+                successBlock.style.display = 'block';
             } else {
-                throw new Error('Оба сервера вернули ошибку');
+                // Если вообще никуда не отправилось (нет интернета)
+                throw new Error('Оба канала связи недоступны');
             }
 
         } catch (error) {
-            console.error('Ошибка отправки:', error);
+            console.error('Критическая ошибка отправки:', error);
             alert('Произошла ошибка при отправке заявки. Пожалуйста, свяжитесь с нами напрямую по телефону: +7 (929) 850-19-93');
         } finally {
-            // Разблокируем кнопку в случае ошибки, чтобы пользователь мог попробовать снова
+            // Возвращаем кнопку в исходное состояние
             submitBtn.disabled = false;
             submitBtn.innerText = 'Отправить заявку';
         }
