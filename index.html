@@ -482,7 +482,7 @@
                 throw new Error('Server error');
             }
         })
-        ..catch(error => {
+        .catch(error => {
     // Оставляем ошибку в консоли для глубокой проверки (если нужно будет посмотреть с ПК)
     console.error('Ошибка отправки в Telegram:', error);
     
