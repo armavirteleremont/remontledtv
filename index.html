@@ -462,32 +462,33 @@
         // Формируем красивый текст сообщения
         const textMessage = `🔔 *Новая заявка с сайта!*\n\n👤 *Имя:* ${name}\n📞 *Телефон:* ${phone}\n📝 *Что сломалось:* ${message}`;
 
-        // Отправляем запрос на официальный сервер Telegram API
-   fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                chat_id: chatId,
-                text: textMessage,
-                parse_mode: 'Markdown' // Делает текст жирным
-            })
-        })
-        .then(response => {
-            if (response.ok) {
-                form.style.display = 'none'; // Скрываем поля формы
-                successBlock.style.display = 'block'; // Показываем зеленую плашку успеха
-            } else {
-                throw new Error('Server error');
+        // Отправляем запрос на официальный сервер Telegram API с повышенными флагами совместимости
+fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+    method: 'POST',
+    mode: 'cors', // Явно разрешаем кросс-доменные запросы для Android
+    cache: 'no-cache', // Запрещаем мобильному браузеру кешировать отправку
+    headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+    },
+    body: JSON.stringify({
+        chat_id: chatId,
+        text: textMessage,
+        parse_mode: 'Markdown'
+    })
+})
+.then(response => {
+    if (response.ok) {
+        form.style.display = 'none'; 
+        successBlock.style.display = 'block'; 
+    } else {
+        // Если Telegram вернул ошибку, выведем её статус для диагностики на телефоне
+        return response.json().then(err => { throw new Error(err.description);
             }
         })
         .catch(error => {
-    // Оставляем ошибку в консоли для глубокой проверки (если нужно будет посмотреть с ПК)
-    console.error('Ошибка отправки в Telegram:', error);
-    
-    // Показываем клиенту окно с вашим номером телефона и технической деталью в конце
-    alert('Произошла ошибка при отправке заявки.\n\nПожалуйста, свяжитесь с нами напрямую по телефону: +7 (929) 850-19-93\n\n(Код ошибки для мастера: ' + error.message + ')');
+            console.error('Ошибка отправки в Telegram:', error);
+            alert('Произошла ошибка при отправке заявки. Пожалуйста, свяжитесь с нами напрямую по телефону: +7 (929) 850-19-93');
         });
     });
 </script>
