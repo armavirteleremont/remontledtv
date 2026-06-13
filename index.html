@@ -445,8 +445,8 @@
         }
     });
 
-    // Асинхронная AJAX отправка формы прямо в Telegram-чат
-    document.getElementById('repairForm').addEventListener('submit', function(e) {
+    // Асинхронная отправка формы в Telegram и на Email
+    document.getElementById('repairForm').addEventListener('submit', async function(e) {
         e.preventDefault(); // Запрещаем перезагрузку страницы
         
         const form = this;
@@ -454,43 +454,63 @@
         const phone = document.getElementById('phone').value;
         const message = document.getElementById('message').value || 'Не указано';
         const successBlock = document.getElementById('successMessage');
+        const submitBtn = form.querySelector('button[type="submit"]');
 
-        // ВАШИ НАСТРОЙКИ:
+        // Меняем текст кнопки и блокируем её от двойных кликов
+        submitBtn.disabled = true;
+        submitBtn.innerText = 'Отправка...';
+
+        // --- Настройки Telegram ---
         const botToken = '8723286181:AAH9V7MknpyutDAocpW0Hbnn99WvhMeHJP0';
         const chatId = '-1003937610148';
-
-        // Формируем красивый текст сообщения
         const textMessage = `🔔 *Новая заявка с сайта!*\n\n👤 *Имя:* ${name}\n📞 *Телефон:* ${phone}\n📝 *Что сломалось:* ${message}`;
 
-        // Отправляем запрос на официальный сервер Telegram API
-        fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-            method: 'POST',
-            mode: 'cors', // Разрешаем кросс-доменные запросы для Android
-            cache: 'no-cache', // Запрещаем кэширование
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            },
-            body: JSON.stringify({
-                chat_id: chatId,
-                text: textMessage,
-                parse_mode: 'Markdown'
-            })
-        })
-        .then(response => {
-            if (response.ok) {
-                form.style.display = 'none'; 
-                successBlock.style.display = 'block'; 
+        try {
+            // 1. Формируем запрос в Telegram
+            const telegramRequest = fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    chat_id: chatId,
+                    text: textMessage,
+                    parse_mode: 'Markdown'
+                })
+            });
+
+            // 2. Формируем запрос на Email через Formsubmit
+            const emailRequest = fetch('https://formsubmit.co/ajax/pashor_@mail.ru', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                    'Имя': name,
+                    'Телефон': phone,
+                    'Сообщение': message,
+                    '_subject': 'Новая заявка с сайта: Армавиртелеремонт' // Тема письма
+                })
+            });
+
+            // Запускаем оба запроса параллельно и ждем их выполнения
+            const [telegramResponse, emailResponse] = await Promise.all([telegramRequest, emailRequest]);
+
+            // Если хотя бы один сервис ответил успешно (лучше ориентироваться на Telegram как основной)
+            if (telegramResponse.ok || emailResponse.ok) {
+                form.style.display = 'none'; // Скрываем форму
+                successBlock.style.display = 'block'; // Показываем плашку успеха
             } else {
-                // Выводим статус ошибки от Telegram
-                return response.json().then(err => { throw new Error(err.description); });
+                throw new Error('Оба сервера вернули ошибку');
             }
-        })
-        .catch(error => {
-            console.error('Ошибка отправки в Telegram:', error);
-            // Показываем клиенту телефон, а вам - причину сбоя
-            alert('Произошла ошибка при отправке заявки.\n\nПожалуйста, свяжитесь с нами напрямую по телефону: +7 (929) 850-19-93\n\n(Код ошибки для мастера: ' + error.message + ')');
-        });
+
+        } catch (error) {
+            console.error('Ошибка отправки:', error);
+            alert('Произошла ошибка при отправке заявки. Пожалуйста, свяжитесь с нами напрямую по телефону: +7 (929) 850-19-93');
+        } finally {
+            // Разблокируем кнопку в случае ошибки, чтобы пользователь мог попробовать снова
+            submitBtn.disabled = false;
+            submitBtn.innerText = 'Отправить заявку';
+        }
     });
 </script>
  
