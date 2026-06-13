@@ -463,7 +463,7 @@
         const textMessage = `🔔 *Новая заявка с сайта!*\n\n👤 *Имя:* ${name}\n📞 *Телефон:* ${phone}\n📝 *Что сломалось:* ${message}`;
 
         // Отправляем запрос на официальный сервер Telegram API
-        fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+   fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -482,9 +482,12 @@
                 throw new Error('Server error');
             }
         })
-        .catch(error => {
-            console.error('Ошибка отправки в Telegram:', error);
-            alert('Произошла ошибка при отправке заявки. Пожалуйста, свяжитесь с нами напрямую по телефону: +7 (929) 850-19-93');
+        ..catch(error => {
+    // Оставляем ошибку в консоли для глубокой проверки (если нужно будет посмотреть с ПК)
+    console.error('Ошибка отправки в Telegram:', error);
+    
+    // Показываем клиенту окно с вашим номером телефона и технической деталью в конце
+    alert('Произошла ошибка при отправке заявки.\n\nПожалуйста, свяжитесь с нами напрямую по телефону: +7 (929) 850-19-93\n\n(Код ошибки для мастера: ' + error.message + ')');
         });
     });
 </script>
