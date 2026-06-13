@@ -455,40 +455,41 @@
         const message = document.getElementById('message').value || 'Не указано';
         const successBlock = document.getElementById('successMessage');
 
-        // ВАШИ НАСТРОЙКИ (Вставьте сюда токен и ID, полученные по инструкции выше):
+        // ВАШИ НАСТРОЙКИ:
         const botToken = '8723286181:AAH9V7MknpyutDAocpW0Hbnn99WvhMeHJP0';
         const chatId = '-1003937610148';
 
         // Формируем красивый текст сообщения
         const textMessage = `🔔 *Новая заявка с сайта!*\n\n👤 *Имя:* ${name}\n📞 *Телефон:* ${phone}\n📝 *Что сломалось:* ${message}`;
 
-        // Отправляем запрос на официальный сервер Telegram API с повышенными флагами совместимости
-fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-    method: 'POST',
-    mode: 'cors', // Явно разрешаем кросс-доменные запросы для Android
-    cache: 'no-cache', // Запрещаем мобильному браузеру кешировать отправку
-    headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-    },
-    body: JSON.stringify({
-        chat_id: chatId,
-        text: textMessage,
-        parse_mode: 'Markdown'
-    })
-})
-.then(response => {
-    if (response.ok) {
-        form.style.display = 'none'; 
-        successBlock.style.display = 'block'; 
-    } else {
-        // Если Telegram вернул ошибку, выведем её статус для диагностики на телефоне
-        return response.json().then(err => { throw new Error(err.description);
+        // Отправляем запрос на официальный сервер Telegram API
+        fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+            method: 'POST',
+            mode: 'cors', // Разрешаем кросс-доменные запросы для Android
+            cache: 'no-cache', // Запрещаем кэширование
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+                chat_id: chatId,
+                text: textMessage,
+                parse_mode: 'Markdown'
+            })
+        })
+        .then(response => {
+            if (response.ok) {
+                form.style.display = 'none'; 
+                successBlock.style.display = 'block'; 
+            } else {
+                // Выводим статус ошибки от Telegram
+                return response.json().then(err => { throw new Error(err.description); });
             }
         })
         .catch(error => {
             console.error('Ошибка отправки в Telegram:', error);
-            alert('Произошла ошибка при отправке заявки. Пожалуйста, свяжитесь с нами напрямую по телефону: +7 (929) 850-19-93');
+            // Показываем клиенту телефон, а вам - причину сбоя
+            alert('Произошла ошибка при отправке заявки.\n\nПожалуйста, свяжитесь с нами напрямую по телефону: +7 (929) 850-19-93\n\n(Код ошибки для мастера: ' + error.message + ')');
         });
     });
 </script>
