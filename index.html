@@ -565,6 +565,9 @@
             form.reset();
             form.style.display = 'none';
             successBlock.style.display = 'block';
+            
+            // НОВАЯ СТРОКА: Отправляем сигнал об успешной конверсии в Яндекс Метрику
+            ym(109234230, 'reachGoal', 'real_lead_tv');
 
         } catch (error) {
             // Сработает только в том случае, если упадет вообще ВСЁ (оба сервиса)
