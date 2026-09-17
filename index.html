@@ -579,7 +579,11 @@
         }
     });
 </script>
- 
-</html>
+  setTimeout(function() {
+    if (typeof ym !== 'undefined') {
+      ym(109234230, 'reachGoal', 'time_20_sec');
+    }
+  }, 20000); // 20000 мс = 20 секунд
+</script>
 </body>
 </html>
